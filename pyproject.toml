@@ -1,2 +1,11 @@
+[project]
+name = "prompt-help"
+version = "0.1.0"
+description = "Public project page for the Prompt Help Windows desktop app."
+requires-python = ">=3.12"
+dependencies = [
+    "Flask==3.0.3",
+]
+
 [tool.vercel]
 entrypoint = "app.py"
