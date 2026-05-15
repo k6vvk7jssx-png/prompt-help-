@@ -12,7 +12,7 @@ DATA_DIR = ROOT_DIR / "data"
 DATABASE_FILE = DATA_DIR / "prompt_history.sqlite3"
 
 
-DEFAULT_HOTKEY = "ctrl+windows+4"
+DEFAULT_HOTKEY = "ctrl+windows+k"
 DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 DEFAULT_DEEPSEEK_MODEL = "deepseek-chat"
 DEFAULT_TIMEOUT_SECONDS = 60.0
