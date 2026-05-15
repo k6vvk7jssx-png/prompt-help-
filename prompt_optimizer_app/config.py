@@ -10,9 +10,11 @@ LOG_DIR = ROOT_DIR / "logs"
 LOG_FILE = LOG_DIR / "prompt_optimizer.log"
 DATA_DIR = ROOT_DIR / "data"
 DATABASE_FILE = DATA_DIR / "prompt_history.sqlite3"
+SINGLE_INSTANCE_HOST = "127.0.0.1"
+SINGLE_INSTANCE_PORT = 18765
 
 
-DEFAULT_HOTKEY = "ctrl+windows+k"
+DEFAULT_HOTKEY = "ctrl+alt+p"
 DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 DEFAULT_DEEPSEEK_MODEL = "deepseek-chat"
 DEFAULT_TIMEOUT_SECONDS = 60.0

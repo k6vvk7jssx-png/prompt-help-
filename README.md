@@ -1,13 +1,13 @@
 # Prompt Optimizer Background Tray App
 
-Select text in any Windows app, press `Ctrl + Win + K`, send the selected text to DeepSeek, and replace it with an optimized Markdown prompt.
+Select text in any Windows app, press `Ctrl + Alt + P`, send the selected text to DeepSeek, and replace it with an optimized Markdown prompt.
 
 This is a local Windows background app with a system tray icon. It does not integrate with any specific app, browser, Gmail, Notion, Word, ChatGPT, or Supabase. It only uses a global hotkey, clipboard copy/paste, and simulated keyboard shortcuts.
 
 ## Features
 
 - Runs in the Windows system tray.
-- Registers `Ctrl + Win + K` as a global hotkey.
+- Registers `Ctrl + Alt + P` as a global hotkey.
 - Copies the selected text from the active app.
 - Sends it to the DeepSeek API.
 - Replaces the selected text with the optimized Markdown prompt.
@@ -72,7 +72,7 @@ Optional `.env` settings:
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-chat
 DEEPSEEK_TIMEOUT_SECONDS=60
-PROMPT_OPTIMIZER_HOTKEY=ctrl+windows+k
+PROMPT_OPTIMIZER_HOTKEY=ctrl+alt+p
 COPY_SETTLE_SECONDS=0.25
 PASTE_SETTLE_SECONDS=0.1
 DASHBOARD_HOST=127.0.0.1
@@ -91,7 +91,7 @@ Then:
 
 1. Write rough text in any app.
 2. Select the text.
-3. Press `Ctrl + Win + K`.
+3. Press `Ctrl + Alt + P`.
 4. Wait for the optimized Markdown prompt to replace the selection.
 
 Use the tray icon menu to:
@@ -184,6 +184,6 @@ The desktop automation itself does not run on Vercel because Vercel cannot acces
 
 - On some Windows systems, global hotkeys may require running the terminal as Administrator.
 - The script temporarily uses the clipboard. If optimization fails, it tries to restore the previous clipboard content.
-- `Ctrl + Win + K` may conflict with system or app shortcuts on some machines. Change it with `PROMPT_OPTIMIZER_HOTKEY` in `.env`, then use **Reload config** from the tray menu.
+- `Ctrl + Alt + P` may conflict with system or app shortcuts on some machines. Change it with `PROMPT_OPTIMIZER_HOTKEY` in `.env`, then use **Reload config** from the tray menu.
 - Keep `.env` private. It is ignored by Git.
 - Supabase is intentionally not used in this version. Configuration and logs stay local.
