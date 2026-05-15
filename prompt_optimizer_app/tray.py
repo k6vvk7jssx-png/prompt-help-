@@ -29,8 +29,13 @@ class PromptOptimizerTrayApp:
             self.history_store,
             self.set_status,
         )
-        self.dashboard = DashboardServer(config, self.history_store)
         self.hotkeys = HotkeyController(config.hotkey, self.run_worker_thread)
+        self.dashboard = DashboardServer(
+            config,
+            self.history_store,
+            self.hotkeys,
+            self.set_status,
+        )
         self.icon = pystray.Icon(
             "prompt-optimizer",
             icon=_create_icon(),

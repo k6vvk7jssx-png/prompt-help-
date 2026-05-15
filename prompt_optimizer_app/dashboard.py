@@ -2,9 +2,10 @@ import logging
 import threading
 import webbrowser
 
-from flask import Flask, render_template_string, request
+from flask import Flask, redirect, render_template_string, request, url_for
 
 from prompt_optimizer_app.config import AppConfig, DATABASE_FILE, LOG_FILE
+from prompt_optimizer_app.hotkeys import HotkeyController
 from prompt_optimizer_app.storage import PromptHistoryStore
 
 
@@ -12,9 +13,17 @@ logger = logging.getLogger(__name__)
 
 
 class DashboardServer:
-    def __init__(self, config: AppConfig, history_store: PromptHistoryStore):
+    def __init__(
+        self,
+        config: AppConfig,
+        history_store: PromptHistoryStore,
+        hotkeys: HotkeyController,
+        on_status,
+    ):
         self.config = config
         self.history_store = history_store
+        self.hotkeys = hotkeys
+        self.on_status = on_status
         self._app = self._create_app()
         self._thread: threading.Thread | None = None
 
@@ -62,7 +71,24 @@ class DashboardServer:
                 status=status,
                 database_file=DATABASE_FILE,
                 log_file=LOG_FILE,
+                hotkey=self.config.hotkey,
+                hotkey_running=self.hotkeys.is_running,
             )
+
+        @app.post("/toggle-power")
+        def toggle_power():
+            try:
+                if self.hotkeys.is_running:
+                    self.hotkeys.stop()
+                    self.on_status("Hotkey stopped from dashboard.")
+                else:
+                    self.hotkeys.start()
+                    self.on_status(f"Hotkey running from dashboard: {self.config.hotkey}")
+            except Exception as exc:
+                logger.exception("Failed to toggle dashboard power.")
+                self.on_status(f"Dashboard power toggle failed: {exc}")
+
+            return redirect(url_for("index"))
 
         return app
 
@@ -129,6 +155,14 @@ DASHBOARD_TEMPLATE = """
       color: var(--muted);
       font-size: 12px;
       text-align: right;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 8px;
     }
 
     main {
@@ -268,6 +302,21 @@ DASHBOARD_TEMPLATE = """
       font-size: 12px;
     }
 
+    .power {
+      min-width: 112px;
+      height: 38px;
+      border-radius: 999px;
+      border: 0;
+    }
+
+    .power-on {
+      background: var(--ok);
+    }
+
+    .power-off {
+      background: var(--error);
+    }
+
     aside {
       position: sticky;
       top: 16px;
@@ -303,6 +352,10 @@ DASHBOARD_TEMPLATE = """
         text-align: left;
       }
 
+      .controls {
+        justify-content: flex-start;
+      }
+
       .text-block + .text-block {
         border-left: 0;
         border-top: 1px solid var(--border);
@@ -324,6 +377,18 @@ DASHBOARD_TEMPLATE = """
       <div class="paths">
         <div>DB: {{ database_file }}</div>
         <div>Logs: {{ log_file }}</div>
+        <div>Hotkey: {{ hotkey }}</div>
+        <form class="controls" method="post" action="{{ url_for('toggle_power') }}">
+          <span class="badge {{ 'success' if hotkey_running else 'error' }}">
+            {{ 'ON' if hotkey_running else 'OFF' }}
+          </span>
+          <button
+            class="power {{ 'power-on' if hotkey_running else 'power-off' }}"
+            type="submit"
+          >
+            {{ 'Turn off' if hotkey_running else 'Turn on' }}
+          </button>
+        </form>
       </div>
     </div>
   </header>

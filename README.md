@@ -96,6 +96,7 @@ Open the tray icon menu and select **Open dashboard**.
 
 The dashboard shows:
 
+- Power button to turn the hotkey on or off.
 - Prompt history.
 - Original text and optimized Markdown.
 - Success and error status.
