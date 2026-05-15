@@ -3,7 +3,21 @@ setlocal
 
 cd /d "%~dp0"
 
-if not exist ".venv\Scripts\pythonw.exe" (
+set "PYTHONW_CMD="
+
+if exist ".venv\Scripts\pythonw.exe" (
+    set "PYTHONW_CMD=%~dp0.venv\Scripts\pythonw.exe"
+)
+
+if "%PYTHONW_CMD%"=="" if exist "%LOCALAPPDATA%\Programs\Python\Python312\pythonw.exe" (
+    set "PYTHONW_CMD=%LOCALAPPDATA%\Programs\Python\Python312\pythonw.exe"
+)
+
+if "%PYTHONW_CMD%"=="" if exist "%LOCALAPPDATA%\Programs\Python\Python314\pythonw.exe" (
+    set "PYTHONW_CMD=%LOCALAPPDATA%\Programs\Python\Python314\pythonw.exe"
+)
+
+if "%PYTHONW_CMD%"=="" (
     echo Virtual environment not found.
     echo Run setup.bat first.
     pause
@@ -17,4 +31,4 @@ if not exist ".env" (
     exit /b 1
 )
 
-start "" ".venv\Scripts\pythonw.exe" "%~dp0prompt_optimizer.py"
+start "" "%PYTHONW_CMD%" "%~dp0prompt_optimizer.py"

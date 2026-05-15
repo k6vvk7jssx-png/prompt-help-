@@ -51,6 +51,12 @@ class PromptOptimizerTrayApp:
             self.set_status(f"Hotkey failed: {exc}")
             logger.exception("Failed to register hotkey.")
 
+        try:
+            self.dashboard.start()
+        except Exception as exc:
+            self.set_status(f"Dashboard failed: {exc}")
+            logger.exception("Failed to start dashboard.")
+
         logger.info("Prompt Optimizer tray app started.")
         self.icon.run()
 

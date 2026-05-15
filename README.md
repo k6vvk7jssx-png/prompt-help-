@@ -15,6 +15,7 @@ This is a local Windows background app with a system tray icon. It does not inte
 - Saves prompt history to `data/prompt_history.sqlite3`.
 - Includes tray menu actions for start/stop, clipboard test, dashboard, config reload, logs, and quit.
 - Opens a local dashboard at `http://127.0.0.1:8765`.
+- Starts the local dashboard automatically when the tray app starts.
 
 ## Setup
 
@@ -42,6 +43,12 @@ Start the app without a terminal window:
 
 ```powershell
 run.bat
+```
+
+If the app does not appear in the tray, run the debug launcher so Windows keeps the error window open:
+
+```powershell
+debug_run.bat
 ```
 
 Manual setup:

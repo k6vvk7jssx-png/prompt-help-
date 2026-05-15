@@ -35,12 +35,14 @@ class DashboardServer:
     def is_running(self) -> bool:
         return self._thread is not None and self._thread.is_alive()
 
-    def open(self) -> None:
+    def start(self) -> None:
         if not self.is_running:
             self._thread = threading.Thread(target=self._run, daemon=True)
             self._thread.start()
             logger.info("Dashboard started at %s", self.url)
 
+    def open(self) -> None:
+        self.start()
         webbrowser.open(self.url)
 
     def update_config(self, config: AppConfig) -> None:
