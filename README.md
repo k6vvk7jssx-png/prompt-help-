@@ -20,6 +20,12 @@ This is a local Windows background app with a system tray icon. It does not inte
 
 Install Python 3.11 or newer for Windows first, and enable **Add python.exe to PATH** during installation.
 
+If `python` is not visible in PowerShell, try the direct path:
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe" --version
+```
+
 Fast Windows setup:
 
 ```powershell
