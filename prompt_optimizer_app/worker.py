@@ -15,6 +15,9 @@ from prompt_optimizer_app.storage import PromptHistoryStore
 logger = logging.getLogger(__name__)
 
 
+HOTKEY_KEYS_TO_RELEASE = ("ctrl", "alt", "shift", "win", "p")
+
+
 class PromptOptimizerWorker:
     def __init__(
         self,
@@ -36,10 +39,12 @@ class PromptOptimizerWorker:
 
         original_clipboard = ""
         try:
+            self._report("Hotkey triggered. Reading selected text...")
             original_clipboard = pyperclip.paste()
 
             copy_marker = f"__PROMPT_OPTIMIZER_COPY_MARKER_{uuid.uuid4()}__"
             pyperclip.copy(copy_marker)
+            self._release_hotkey_keys()
             pyautogui.hotkey("ctrl", "c")
             time.sleep(self.config.copy_settle_seconds)
             selected_text = pyperclip.paste()
@@ -129,3 +134,12 @@ class PromptOptimizerWorker:
         else:
             logger.info(message)
         self.on_status(message)
+
+    @staticmethod
+    def _release_hotkey_keys() -> None:
+        for key in HOTKEY_KEYS_TO_RELEASE:
+            try:
+                pyautogui.keyUp(key)
+            except Exception:
+                logger.debug("Failed to release key: %s", key, exc_info=True)
+        time.sleep(0.15)
