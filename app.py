@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask, render_template_string
 
 
@@ -6,6 +8,7 @@ app = Flask(__name__)
 
 @app.get("/")
 def index():
+    has_deepseek_key = bool(os.getenv("DEEPSEEK_API_KEY", "").strip())
     return render_template_string(
         """
         <!doctype html>
@@ -23,6 +26,7 @@ def index():
               --border: #d9ddd5;
               --accent: #2563eb;
               --ok: #13795b;
+              --warn: #b54708;
               --code: #f1f5f9;
             }
 
@@ -161,6 +165,11 @@ def index():
               font-weight: 700;
             }
 
+            .warning {
+              color: var(--warn);
+              font-weight: 700;
+            }
+
             @media (max-width: 760px) {
               header {
                 padding-top: 38px;
@@ -229,6 +238,11 @@ run.bat</pre>
             <section class="panel">
               <h2>Deployment Status</h2>
               <p class="status">Vercel entrypoint is configured.</p>
+              {% if has_deepseek_key %}
+                <p class="status">DEEPSEEK_API_KEY is configured on Vercel.</p>
+              {% else %}
+                <p class="warning">DEEPSEEK_API_KEY is not configured on Vercel.</p>
+              {% endif %}
               <p class="note">
                 The desktop automation is intentionally not executed on Vercel because
                 cloud servers cannot access your Windows keyboard, clipboard, or tray.
@@ -237,5 +251,6 @@ run.bat</pre>
           </main>
         </body>
         </html>
-        """
+        """,
+        has_deepseek_key=has_deepseek_key,
     )

@@ -160,6 +160,16 @@ Do not commit `.env`, `data/`, or `logs/`.
 
 Vercel deploys the public project page in `app.py`.
 
+The deployment entrypoint is explicitly set in `pyproject.toml`.
+
+If you want the Vercel page to show that DeepSeek is configured, add this Vercel Environment Variable:
+
+```text
+DEEPSEEK_API_KEY=your_real_deepseek_key
+```
+
+Add it in Vercel under **Project Settings -> Environment Variables** for Production, Preview, and Development as needed. The page only checks whether the variable exists; it never prints the secret.
+
 The desktop automation itself does not run on Vercel because Vercel cannot access a user's Windows keyboard, clipboard, system tray, or selected text in other apps. Users should install and run the Windows app locally with `setup.bat` and `run.bat`.
 
 ## Notes
