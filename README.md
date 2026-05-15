@@ -20,6 +20,26 @@ This is a local Windows background app with a system tray icon. It does not inte
 
 Install Python 3.11 or newer for Windows first, and enable **Add python.exe to PATH** during installation.
 
+Fast Windows setup:
+
+```powershell
+setup.bat
+```
+
+Then open `.env` and set:
+
+```text
+DEEPSEEK_API_KEY=your_real_key_here
+```
+
+Start the app without a terminal window:
+
+```powershell
+run.bat
+```
+
+Manual setup:
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -51,6 +71,8 @@ DASHBOARD_PORT=8765
 ```powershell
 python prompt_optimizer.py
 ```
+
+Or double-click `run.bat` to start it as a background tray app without keeping a terminal open.
 
 Then:
 
@@ -97,14 +119,23 @@ To use this from another machine or repository:
 ```powershell
 git clone <your-repository-url>
 cd <your-repository-folder>
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-Copy-Item .env.example .env
-python prompt_optimizer.py
+setup.bat
+run.bat
 ```
 
 Add the real DeepSeek API key to `.env` before using the hotkey.
+
+To create a standalone Windows executable:
+
+```powershell
+build_exe.bat
+```
+
+The output will be:
+
+```text
+dist\PromptOptimizer.exe
+```
 
 To publish on GitHub later:
 
