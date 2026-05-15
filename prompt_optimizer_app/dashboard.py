@@ -5,6 +5,7 @@ import webbrowser
 from flask import Flask, redirect, render_template_string, request, url_for
 
 from prompt_optimizer_app.config import AppConfig, DATABASE_FILE, LOG_FILE
+from prompt_optimizer_app.deepseek import DeepSeekClient
 from prompt_optimizer_app.hotkeys import HotkeyController
 from prompt_optimizer_app.storage import PromptHistoryStore
 
@@ -92,6 +93,28 @@ class DashboardServer:
 
             return redirect(url_for("index"))
 
+        @app.post("/test-api")
+        def test_api():
+            original_text = "Create a short test prompt for a todo app."
+            try:
+                optimized_text = DeepSeekClient(self.config).optimize_prompt(original_text)
+                self.history_store.add_success(
+                    source="api_test",
+                    original_text=original_text,
+                    optimized_text=optimized_text,
+                )
+                self.on_status("DeepSeek API test succeeded.")
+            except Exception as exc:
+                self.history_store.add_error(
+                    source="api_test",
+                    original_text=original_text,
+                    error_message=str(exc),
+                )
+                logger.exception("DeepSeek API test failed.")
+                self.on_status(f"DeepSeek API test failed: {exc}")
+
+            return redirect(url_for("index"))
+
         return app
 
 
@@ -165,6 +188,14 @@ DASHBOARD_TEMPLATE = """
       justify-content: flex-end;
       gap: 10px;
       margin-top: 8px;
+    }
+
+    .header-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 10px;
     }
 
     main {
@@ -319,6 +350,11 @@ DASHBOARD_TEMPLATE = """
       background: var(--error);
     }
 
+    .test-api {
+      background: #374151;
+      border-color: #374151;
+    }
+
     aside {
       position: sticky;
       top: 16px;
@@ -358,6 +394,10 @@ DASHBOARD_TEMPLATE = """
         justify-content: flex-start;
       }
 
+      .header-actions {
+        justify-content: flex-start;
+      }
+
       .text-block + .text-block {
         border-left: 0;
         border-top: 1px solid var(--border);
@@ -390,6 +430,9 @@ DASHBOARD_TEMPLATE = """
           >
             {{ 'Turn off' if hotkey_running else 'Turn on' }}
           </button>
+        </form>
+        <form class="header-actions" method="post" action="{{ url_for('test_api') }}">
+          <button class="test-api" type="submit">Test DeepSeek API</button>
         </form>
       </div>
     </div>

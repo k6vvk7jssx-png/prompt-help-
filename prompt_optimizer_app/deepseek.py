@@ -35,7 +35,15 @@ class DeepSeekClient:
             },
             timeout=self.config.deepseek_timeout_seconds,
         )
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            detail = response.text.strip()
+            if len(detail) > 300:
+                detail = f"{detail[:300]}..."
+            raise RuntimeError(
+                f"DeepSeek API error {response.status_code}: {detail}"
+            ) from exc
 
         data = response.json()
         try:
@@ -47,4 +55,3 @@ class DeepSeekClient:
             raise RuntimeError("DeepSeek returned an empty prompt.")
 
         return optimized
-

@@ -110,6 +110,7 @@ Open the tray icon menu and select **Open dashboard**.
 The dashboard shows:
 
 - Power button to turn the hotkey on or off.
+- DeepSeek API test button.
 - Prompt history.
 - Original text and optimized Markdown.
 - Success and error status.
