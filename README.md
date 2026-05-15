@@ -156,6 +156,12 @@ git push -u origin main
 
 Do not commit `.env`, `data/`, or `logs/`.
 
+## Vercel
+
+Vercel deploys the public project page in `app.py`.
+
+The desktop automation itself does not run on Vercel because Vercel cannot access a user's Windows keyboard, clipboard, system tray, or selected text in other apps. Users should install and run the Windows app locally with `setup.bat` and `run.bat`.
+
 ## Notes
 
 - On some Windows systems, global hotkeys may require running the terminal as Administrator.
