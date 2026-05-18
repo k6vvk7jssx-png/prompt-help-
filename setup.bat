@@ -26,6 +26,14 @@ if "%PYTHON_CMD%"=="" (
     exit /b 1
 )
 
+if exist ".venv\Scripts\python.exe" (
+    ".venv\Scripts\python.exe" --version >nul 2>nul
+    if errorlevel 1 (
+        echo Existing virtual environment is broken. Recreating .venv...
+        rmdir /s /q ".venv"
+    )
+)
+
 if not exist ".venv" (
     "%PYTHON_CMD%" -m venv .venv
     if errorlevel 1 (

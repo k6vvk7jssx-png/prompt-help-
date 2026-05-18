@@ -13,6 +13,7 @@ This is a local Windows background app with a system tray icon. It does not inte
 - Replaces the selected text with the optimized Markdown prompt.
 - Logs status and errors to `logs/prompt_optimizer.log`.
 - Saves prompt history to `data/prompt_history.sqlite3`.
+- Saves an optional custom agent system prompt to `data/system_prompt.md`.
 - Includes tray menu actions for start/stop, clipboard test, dashboard, config reload, logs, and quit.
 - Opens a local dashboard at `http://127.0.0.1:8765`.
 - Starts the local dashboard automatically when the tray app starts.
@@ -27,11 +28,15 @@ If `python` is not visible in PowerShell, try the direct path:
 & "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe" --version
 ```
 
+If both `python --version` and the direct path fail, reinstall Python from python.org and enable **Add python.exe to PATH**, then close and reopen PowerShell.
+
 Fast Windows setup:
 
 ```powershell
-setup.bat
+.\setup.bat
 ```
+
+If an old virtual environment is broken, `setup.bat` recreates `.venv` automatically after Python is visible again.
 
 Then open `.env` and set:
 
@@ -42,13 +47,13 @@ DEEPSEEK_API_KEY=your_real_key_here
 Start the app without a terminal window:
 
 ```powershell
-run.bat
+.\run.bat
 ```
 
 If the app does not appear in the tray, run the debug launcher so Windows keeps the error window open:
 
 ```powershell
-debug_run.bat
+.\debug_run.bat
 ```
 
 Manual setup:
@@ -111,6 +116,7 @@ The dashboard shows:
 
 - Power button to turn the hotkey on or off.
 - DeepSeek API test button.
+- System prompt editor for the DeepSeek agent.
 - Prompt history.
 - Original text and optimized Markdown.
 - Success and error status.
@@ -122,10 +128,23 @@ Local files:
 
 ```text
 data/prompt_history.sqlite3
+data/system_prompt.md
 logs/prompt_optimizer.log
 ```
 
-The `data/` and `logs/` folders are ignored by Git so private prompts, API errors, and local history are not published by mistake.
+The `data/` and `logs/` folders are ignored by Git so private prompts, API errors, custom system prompts, and local history are not published by mistake.
+
+## Edit the Agent System Prompt
+
+Open the dashboard at `http://127.0.0.1:8765` and click **Edit system prompt**.
+
+When you save, the custom prompt is stored only on your machine:
+
+```text
+data/system_prompt.md
+```
+
+The next hotkey run uses the saved prompt automatically. If you reset it from the dashboard, the app goes back to the default prompt built into `prompt_optimizer_app/deepseek.py`.
 
 ## Repository Export
 
@@ -134,8 +153,8 @@ To use this from another machine or repository:
 ```powershell
 git clone <your-repository-url>
 cd <your-repository-folder>
-setup.bat
-run.bat
+.\setup.bat
+.\run.bat
 ```
 
 Add the real DeepSeek API key to `.env` before using the hotkey.

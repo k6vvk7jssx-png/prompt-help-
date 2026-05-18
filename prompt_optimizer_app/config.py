@@ -10,6 +10,7 @@ LOG_DIR = ROOT_DIR / "logs"
 LOG_FILE = LOG_DIR / "prompt_optimizer.log"
 DATA_DIR = ROOT_DIR / "data"
 DATABASE_FILE = DATA_DIR / "prompt_history.sqlite3"
+SYSTEM_PROMPT_FILE = DATA_DIR / "system_prompt.md"
 SINGLE_INSTANCE_HOST = "127.0.0.1"
 SINGLE_INSTANCE_PORT = 18765
 

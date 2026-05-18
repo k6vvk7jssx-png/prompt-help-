@@ -1,6 +1,6 @@
 import requests
 
-from prompt_optimizer_app.config import AppConfig
+from prompt_optimizer_app.config import AppConfig, DATA_DIR, SYSTEM_PROMPT_FILE
 
 
 SYSTEM_PROMPT = """You are an expert AI Prompt Optimizer and role router.
@@ -293,6 +293,29 @@ You are a [chosen expert role].
 """
 
 
+def get_system_prompt() -> str:
+    if SYSTEM_PROMPT_FILE.exists():
+        custom_prompt = SYSTEM_PROMPT_FILE.read_text(encoding="utf-8").strip()
+        if custom_prompt:
+            return custom_prompt
+
+    return SYSTEM_PROMPT
+
+
+def save_system_prompt(content: str) -> None:
+    prompt = content.strip()
+    if not prompt:
+        raise ValueError("System prompt cannot be empty.")
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    SYSTEM_PROMPT_FILE.write_text(f"{prompt}\n", encoding="utf-8")
+
+
+def reset_system_prompt() -> None:
+    if SYSTEM_PROMPT_FILE.exists():
+        SYSTEM_PROMPT_FILE.unlink()
+
+
 class DeepSeekClient:
     def __init__(self, config: AppConfig):
         self.config = config
@@ -310,7 +333,7 @@ class DeepSeekClient:
             json={
                 "model": self.config.deepseek_model,
                 "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "system", "content": get_system_prompt()},
                     {"role": "user", "content": text},
                 ],
                 "temperature": 0.2,

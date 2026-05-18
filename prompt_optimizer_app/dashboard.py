@@ -4,8 +4,13 @@ import webbrowser
 
 from flask import Flask, redirect, render_template_string, request, url_for
 
-from prompt_optimizer_app.config import AppConfig, DATABASE_FILE, LOG_FILE
-from prompt_optimizer_app.deepseek import DeepSeekClient
+from prompt_optimizer_app.config import AppConfig, DATABASE_FILE, LOG_FILE, SYSTEM_PROMPT_FILE
+from prompt_optimizer_app.deepseek import (
+    DeepSeekClient,
+    get_system_prompt,
+    reset_system_prompt,
+    save_system_prompt,
+)
 from prompt_optimizer_app.hotkeys import HotkeyController
 from prompt_optimizer_app.storage import PromptHistoryStore
 
@@ -115,6 +120,36 @@ class DashboardServer:
 
             return redirect(url_for("index"))
 
+        @app.get("/system-prompt")
+        def system_prompt_page():
+            return render_template_string(
+                SYSTEM_PROMPT_TEMPLATE,
+                system_prompt=get_system_prompt(),
+                system_prompt_file=SYSTEM_PROMPT_FILE,
+            )
+
+        @app.post("/system-prompt")
+        def save_system_prompt_page():
+            try:
+                save_system_prompt(request.form.get("system_prompt", ""))
+                self.on_status("System prompt saved from dashboard.")
+            except Exception as exc:
+                logger.exception("Failed to save system prompt.")
+                self.on_status(f"Failed to save system prompt: {exc}")
+
+            return redirect(url_for("system_prompt_page"))
+
+        @app.post("/system-prompt/reset")
+        def reset_system_prompt_page():
+            try:
+                reset_system_prompt()
+                self.on_status("System prompt reset to default.")
+            except Exception as exc:
+                logger.exception("Failed to reset system prompt.")
+                self.on_status(f"Failed to reset system prompt: {exc}")
+
+            return redirect(url_for("system_prompt_page"))
+
         return app
 
 
@@ -211,7 +246,8 @@ DASHBOARD_TEMPLATE = """
 
     input,
     select,
-    button {
+    button,
+    .button-link {
       height: 38px;
       border: 1px solid var(--border);
       border-radius: 6px;
@@ -227,6 +263,16 @@ DASHBOARD_TEMPLATE = """
       border-color: var(--accent);
       color: white;
       font-weight: 700;
+    }
+
+    .button-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      font-weight: 700;
+      background: white;
+      color: var(--text);
     }
 
     .layout {
@@ -431,9 +477,12 @@ DASHBOARD_TEMPLATE = """
             {{ 'Turn off' if hotkey_running else 'Turn on' }}
           </button>
         </form>
-        <form class="header-actions" method="post" action="{{ url_for('test_api') }}">
-          <button class="test-api" type="submit">Test DeepSeek API</button>
-        </form>
+        <div class="header-actions">
+          <a class="button-link" href="{{ url_for('system_prompt_page') }}">Edit system prompt</a>
+          <form method="post" action="{{ url_for('test_api') }}">
+            <button class="test-api" type="submit">Test DeepSeek API</button>
+          </form>
+        </div>
       </div>
     </div>
   </header>
@@ -517,6 +566,167 @@ DASHBOARD_TEMPLATE = """
       });
     });
   </script>
+</body>
+</html>
+"""
+
+
+SYSTEM_PROMPT_TEMPLATE = """
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edit System Prompt</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f7f3;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #667085;
+      --border: #d9ddd5;
+      --accent: #2563eb;
+      --danger: #b42318;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .wrap {
+      width: min(1040px, calc(100vw - 32px));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 72px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: 0;
+    }
+
+    main {
+      padding: 24px 0 48px;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 68vh;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      color: var(--text);
+      font: 13px/1.5 Consolas, "Courier New", monospace;
+      white-space: pre;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    button,
+    .button-link {
+      height: 38px;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      padding: 0 12px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--accent);
+      color: white;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .secondary {
+      background: white;
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    .danger {
+      background: var(--danger);
+      border-color: var(--danger);
+    }
+
+    @media (max-width: 720px) {
+      .topbar {
+        display: grid;
+      }
+
+      textarea {
+        min-height: 60vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap topbar">
+      <div>
+        <h1>Edit System Prompt</h1>
+        <div class="meta">Saved locally at: {{ system_prompt_file }}</div>
+      </div>
+      <a class="button-link secondary" href="{{ url_for('index') }}">Back to dashboard</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="panel">
+      <form method="post" action="{{ url_for('save_system_prompt_page') }}">
+        <textarea name="system_prompt" spellcheck="false">{{ system_prompt }}</textarea>
+        <div class="actions">
+          <button type="submit">Save system prompt</button>
+          <a class="button-link secondary" href="{{ url_for('index') }}">Cancel</a>
+        </div>
+      </form>
+      <form class="actions" method="post" action="{{ url_for('reset_system_prompt_page') }}">
+        <button class="danger" type="submit">Reset to default prompt</button>
+      </form>
+    </section>
+  </main>
 </body>
 </html>
 """

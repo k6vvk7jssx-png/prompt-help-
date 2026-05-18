@@ -6,7 +6,10 @@ cd /d "%~dp0"
 set "PYTHONW_CMD="
 
 if exist ".venv\Scripts\pythonw.exe" (
-    set "PYTHONW_CMD=%~dp0.venv\Scripts\pythonw.exe"
+    "%~dp0.venv\Scripts\pythonw.exe" --version >nul 2>nul
+    if not errorlevel 1 (
+        set "PYTHONW_CMD=%~dp0.venv\Scripts\pythonw.exe"
+    )
 )
 
 if "%PYTHONW_CMD%"=="" if exist "%LOCALAPPDATA%\Programs\Python\Python312\pythonw.exe" (
@@ -18,7 +21,7 @@ if "%PYTHONW_CMD%"=="" if exist "%LOCALAPPDATA%\Programs\Python\Python314\python
 )
 
 if "%PYTHONW_CMD%"=="" (
-    echo Virtual environment not found.
+    echo Valid virtual environment not found.
     echo Run setup.bat first.
     pause
     exit /b 1

@@ -6,7 +6,10 @@ cd /d "%~dp0"
 set "PYTHON_CMD="
 
 if exist ".venv\Scripts\python.exe" (
-    set "PYTHON_CMD=%~dp0.venv\Scripts\python.exe"
+    "%~dp0.venv\Scripts\python.exe" --version >nul 2>nul
+    if not errorlevel 1 (
+        set "PYTHON_CMD=%~dp0.venv\Scripts\python.exe"
+    )
 )
 
 if "%PYTHON_CMD%"=="" if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" (
