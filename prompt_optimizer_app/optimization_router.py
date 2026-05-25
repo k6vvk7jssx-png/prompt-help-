@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass
 from threading import Lock
 
-from prompt_optimizer_app.consent_dialog import confirm_web_helper_run
+from prompt_optimizer_app.consent_dialog import confirm_deepseek_run, confirm_web_helper_run
 from prompt_optimizer_app.config import AppConfig
 from prompt_optimizer_app.deepseek import DeepSeekClient
 from prompt_optimizer_app.provider_detector import detect_provider
@@ -81,8 +81,9 @@ class OptimizationRouter:
                     text_length=len(selected_text),
                 )
                 if not consent_granted:
-                    fallback_text = self.deepseek_client.optimize_prompt(
-                        selected_text, provider=provider
+                    fallback_text = self._optimize_with_deepseek_guarded(
+                        selected_text=selected_text,
+                        provider=provider,
                     )
                     result = OptimizationResult(
                         optimized_text=fallback_text,
@@ -135,7 +136,10 @@ class OptimizationRouter:
                     self._set_status_from_result(result, runtime_settings.web_access_armed)
                     raise
 
-                fallback_text = self.deepseek_client.optimize_prompt(selected_text, provider=provider)
+                fallback_text = self._optimize_with_deepseek_guarded(
+                    selected_text=selected_text,
+                    provider=provider,
+                )
                 result = OptimizationResult(
                     optimized_text=fallback_text,
                     detected_provider=provider,
@@ -152,7 +156,10 @@ class OptimizationRouter:
                 self._set_status_from_result(result, runtime_settings.web_access_armed)
                 return result
 
-        optimized_text = self.deepseek_client.optimize_prompt(selected_text, provider=provider)
+        optimized_text = self._optimize_with_deepseek_guarded(
+            selected_text=selected_text,
+            provider=provider,
+        )
         helper_error_code = ""
         helper_error_message = ""
         if self.config.web_helpers_enabled and not runtime_settings.web_access_armed:
@@ -194,3 +201,12 @@ class OptimizationRouter:
                 consent_granted=result.consent_granted,
                 consent_denied=result.consent_denied,
             )
+
+    def _optimize_with_deepseek_guarded(self, selected_text: str, provider: str) -> str:
+        if self.config.require_deepseek_consent:
+            allowed = confirm_deepseek_run(len(selected_text))
+            if not allowed:
+                raise RuntimeError(
+                    "DeepSeek consent denied. No external API request was sent."
+                )
+        return self.deepseek_client.optimize_prompt(selected_text, provider=provider)

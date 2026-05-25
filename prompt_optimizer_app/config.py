@@ -21,6 +21,7 @@ DEFAULT_HOTKEY = "ctrl+alt+p"
 DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 DEFAULT_DEEPSEEK_MODEL = "deepseek-chat"
 DEFAULT_TIMEOUT_SECONDS = 60.0
+DEFAULT_REQUIRE_DEEPSEEK_CONSENT = True
 DEFAULT_COPY_SETTLE_SECONDS = 0.45
 DEFAULT_PASTE_SETTLE_SECONDS = 0.1
 DEFAULT_DASHBOARD_HOST = "127.0.0.1"
@@ -40,6 +41,7 @@ class AppConfig:
     deepseek_base_url: str
     deepseek_model: str
     deepseek_timeout_seconds: float
+    require_deepseek_consent: bool
     hotkey: str
     copy_settle_seconds: float
     paste_settle_seconds: float
@@ -65,6 +67,9 @@ def load_config() -> AppConfig:
         deepseek_model=os.getenv("DEEPSEEK_MODEL", DEFAULT_DEEPSEEK_MODEL),
         deepseek_timeout_seconds=_float_env(
             "DEEPSEEK_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS
+        ),
+        require_deepseek_consent=_bool_env(
+            "REQUIRE_DEEPSEEK_CONSENT", DEFAULT_REQUIRE_DEEPSEEK_CONSENT
         ),
         hotkey=os.getenv("PROMPT_OPTIMIZER_HOTKEY", DEFAULT_HOTKEY),
         copy_settle_seconds=_float_env(

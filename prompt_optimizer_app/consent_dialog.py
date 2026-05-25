@@ -28,3 +28,21 @@ def confirm_web_helper_run(provider: str, helper_url: str, text_length: int) -> 
     except Exception:
         return False
     return result == IDYES
+
+
+def confirm_deepseek_run(text_length: int) -> bool:
+    message = (
+        "External API access requested.\n\n"
+        "Provider: DeepSeek API\n"
+        f"Prompt length: {text_length} chars\n"
+        "Planned path: local API fallback\n\n"
+        "Allow this single run?"
+    )
+    title = "Prompt Optimizer - Confirm DeepSeek Run"
+    flags = MB_YESNO | MB_ICONWARNING | MB_TOPMOST | MB_SETFOREGROUND
+
+    try:
+        result = ctypes.windll.user32.MessageBoxW(None, message, title, flags)
+    except Exception:
+        return False
+    return result == IDYES

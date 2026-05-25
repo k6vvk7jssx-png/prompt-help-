@@ -13,6 +13,7 @@ This is a local Windows background app with a system tray icon. It uses a global
 - Keeps web helper access disabled by default (`WEB_HELPERS_ENABLED=false`).
 - Requires explicit web access arming from tray/dashboard before any external run.
 - Shows a native consent alert before every external run to ChatGPT/Claude/Gemini helper.
+- Shows a native consent alert before every DeepSeek API run when `REQUIRE_DEEPSEEK_CONSENT=true`.
 - Tries provider-specific web helper automation only after your per-run consent.
 - Falls back automatically to DeepSeek if web helper automation fails.
 - Replaces the selected text with the optimized Markdown prompt.
@@ -88,6 +89,7 @@ Optional `.env` settings:
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-chat
 DEEPSEEK_TIMEOUT_SECONDS=60
+REQUIRE_DEEPSEEK_CONSENT=true
 PROMPT_OPTIMIZER_HOTKEY=ctrl+alt+p
 COPY_SETTLE_SECONDS=0.45
 PASTE_SETTLE_SECONDS=0.1
@@ -228,6 +230,7 @@ The desktop automation itself does not run on Vercel because Vercel cannot acces
 - On some Windows systems, global hotkeys may require running the terminal as Administrator.
 - For web helper mode, stay logged in at least once on OpenAI, Claude, and AI Studio in the browser profile used by Playwright.
 - Consent is always required before each external web-helper run. Denied consent triggers automatic local fallback.
+- If `REQUIRE_DEEPSEEK_CONSENT=true`, consent is also required before each DeepSeek API call. If denied, no external API request is made and selected text is left unchanged.
 - The script temporarily uses the clipboard. If optimization fails, it tries to restore the previous clipboard content.
 - `Ctrl + Alt + P` may conflict with system or app shortcuts on some machines. Change it with `PROMPT_OPTIMIZER_HOTKEY` in `.env`, then use **Reload config** from the tray menu.
 - Keep `.env` private. It is ignored by Git.
