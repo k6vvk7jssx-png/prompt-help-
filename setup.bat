@@ -52,6 +52,11 @@ if errorlevel 1 (
     exit /b 1
 )
 
+python -m playwright install chromium
+if errorlevel 1 (
+    echo Playwright browser install failed. Web helper mode may not work until this succeeds.
+)
+
 if not exist ".env" (
     copy ".env.example" ".env" >nul
     echo Created .env from .env.example.

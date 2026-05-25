@@ -12,6 +12,8 @@ from prompt_optimizer_app.deepseek import (
     save_system_prompt,
 )
 from prompt_optimizer_app.hotkeys import HotkeyController
+from prompt_optimizer_app.optimization_router import OptimizationRouter
+from prompt_optimizer_app.runtime_settings import RuntimeSettingsStore
 from prompt_optimizer_app.storage import PromptHistoryStore
 
 
@@ -24,11 +26,15 @@ class DashboardServer:
         config: AppConfig,
         history_store: PromptHistoryStore,
         hotkeys: HotkeyController,
+        optimization_router: OptimizationRouter,
+        runtime_settings_store: RuntimeSettingsStore,
         on_status,
     ):
         self.config = config
         self.history_store = history_store
         self.hotkeys = hotkeys
+        self.optimization_router = optimization_router
+        self.runtime_settings_store = runtime_settings_store
         self.on_status = on_status
         self._app = self._create_app()
         self._thread: threading.Thread | None = None
@@ -69,18 +75,32 @@ class DashboardServer:
         def index():
             query = request.args.get("q", "").strip()
             status = request.args.get("status", "all").strip()
-            records = self.history_store.list_records(query=query, status=status)
+            provider = request.args.get("provider", "all").strip()
+            records = self.history_store.list_records(query=query, status=status, provider=provider)
             recent_errors = self.history_store.list_recent_errors()
+            runtime_settings = self.runtime_settings_store.load()
+            pipeline_status = self.optimization_router.status
             return render_template_string(
                 DASHBOARD_TEMPLATE,
                 records=records,
                 recent_errors=recent_errors,
                 query=query,
                 status=status,
+                provider=provider,
                 database_file=DATABASE_FILE,
                 log_file=LOG_FILE,
                 hotkey=self.config.hotkey,
                 hotkey_running=self.hotkeys.is_running,
+                web_helpers_enabled=self.config.web_helpers_enabled,
+                web_helper_timeout_seconds=self.config.web_helper_timeout_seconds,
+                web_helper_retry_count=self.config.web_helper_retry_count,
+                web_helper_fallback_local=self.config.web_helper_fallback_local,
+                openai_helper_url=self.config.openai_helper_url,
+                claude_helper_url=self.config.claude_helper_url,
+                gemini_helper_url=self.config.gemini_helper_url,
+                auto_provider_detection=runtime_settings.auto_provider_detection,
+                web_access_armed=runtime_settings.web_access_armed,
+                pipeline_status=pipeline_status,
             )
 
         @app.post("/toggle-power")
@@ -118,6 +138,30 @@ class DashboardServer:
                 logger.exception("DeepSeek API test failed.")
                 self.on_status(f"DeepSeek API test failed: {exc}")
 
+            return redirect(url_for("index"))
+
+        @app.post("/toggle-auto-provider-detection")
+        def toggle_auto_provider_detection():
+            try:
+                updated = self.runtime_settings_store.toggle_auto_provider_detection()
+                state = "ON" if updated.auto_provider_detection else "OFF"
+                self.on_status(f"Auto provider detection: {state}")
+            except Exception as exc:
+                logger.exception("Failed to toggle auto provider detection.")
+                self.on_status(f"Failed to toggle auto provider detection: {exc}")
+            return redirect(url_for("index"))
+
+        @app.post("/set-web-access")
+        def set_web_access():
+            mode = request.form.get("mode", "").strip().lower()
+            arm = mode == "arm"
+            try:
+                updated = self.runtime_settings_store.set_web_access_armed(arm)
+                state = "ARMED" if updated.web_access_armed else "DISARMED"
+                self.on_status(f"Web access: {state}")
+            except Exception as exc:
+                logger.exception("Failed to set web access state.")
+                self.on_status(f"Failed to set web access: {exc}")
             return redirect(url_for("index"))
 
         @app.get("/system-prompt")
@@ -239,7 +283,7 @@ DASHBOARD_TEMPLATE = """
 
     form.filters {
       display: grid;
-      grid-template-columns: minmax(220px, 1fr) 180px auto;
+      grid-template-columns: minmax(220px, 1fr) 180px 180px auto;
       gap: 10px;
       margin-bottom: 18px;
     }
@@ -420,6 +464,41 @@ DASHBOARD_TEMPLATE = """
       overflow-wrap: anywhere;
     }
 
+    .helper-links {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .helper-links a {
+      color: var(--accent);
+      text-decoration: none;
+      overflow-wrap: anywhere;
+    }
+
+    .helper-links a:hover {
+      text-decoration: underline;
+    }
+
+    .pipeline {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .pipeline p {
+      margin: 6px 0;
+    }
+
+    .auto-detect-form {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
     @media (max-width: 860px) {
       .topbar,
       .layout,
@@ -466,6 +545,7 @@ DASHBOARD_TEMPLATE = """
         <div>DB: {{ database_file }}</div>
         <div>Logs: {{ log_file }}</div>
         <div>Hotkey: {{ hotkey }}</div>
+        <div>Web helpers: {{ 'ON' if web_helpers_enabled else 'OFF' }}</div>
         <form class="controls" method="post" action="{{ url_for('toggle_power') }}">
           <span class="badge {{ 'success' if hotkey_running else 'error' }}">
             {{ 'ON' if hotkey_running else 'OFF' }}
@@ -483,17 +563,65 @@ DASHBOARD_TEMPLATE = """
             <button class="test-api" type="submit">Test DeepSeek API</button>
           </form>
         </div>
+        <div class="helper-links">
+          <a href="{{ openai_helper_url }}" target="_blank" rel="noopener noreferrer">OpenAI helper</a>
+          <a href="{{ claude_helper_url }}" target="_blank" rel="noopener noreferrer">Claude helper</a>
+          <a href="{{ gemini_helper_url }}" target="_blank" rel="noopener noreferrer">Gemini AI Studio</a>
+        </div>
       </div>
     </div>
   </header>
 
   <main class="wrap">
+    <section class="pipeline">
+      <h2 class="section-title">Web Helper Pipeline</h2>
+      <p><strong>Web access:</strong> {{ 'ARMED' if web_access_armed else 'DISARMED' }}</p>
+      <p><strong>Per-run consent:</strong> REQUIRED</p>
+      <p><strong>Last provider:</strong> {{ pipeline_status.last_provider }}</p>
+      <p><strong>Last execution path:</strong> {{ pipeline_status.last_execution_path }}</p>
+      <p><strong>Last helper:</strong> {{ pipeline_status.last_helper_name }}</p>
+      <p><strong>Last helper latency:</strong> {{ pipeline_status.last_helper_latency_ms }} ms</p>
+      <p><strong>Last helper error:</strong> {{ pipeline_status.last_helper_error or "None" }}</p>
+      <p><strong>Last consent:</strong>
+        {% if pipeline_status.consent_denied %}
+          DENIED
+        {% elif pipeline_status.consent_granted %}
+          GRANTED
+        {% elif pipeline_status.consent_required %}
+          REQUIRED
+        {% else %}
+          N/A
+        {% endif %}
+      </p>
+      <p><strong>Timeout:</strong> {{ web_helper_timeout_seconds }}s | <strong>Retry:</strong> {{ web_helper_retry_count }} | <strong>Fallback local:</strong> {{ 'ON' if web_helper_fallback_local else 'OFF' }}</p>
+      <form class="auto-detect-form" method="post" action="{{ url_for('set_web_access') }}">
+        <input type="hidden" name="mode" value="{{ 'disarm' if web_access_armed else 'arm' }}">
+        <span class="badge {{ 'success' if web_access_armed else 'error' }}">
+          {{ 'ARMED' if web_access_armed else 'DISARMED' }}
+        </span>
+        <button type="submit">{{ 'Disable web access' if web_access_armed else 'Enable web access' }}</button>
+      </form>
+      <form class="auto-detect-form" method="post" action="{{ url_for('toggle_auto_provider_detection') }}">
+        <span class="badge {{ 'success' if auto_provider_detection else 'error' }}">
+          {{ 'AUTO DETECT ON' if auto_provider_detection else 'AUTO DETECT OFF' }}
+        </span>
+        <button type="submit">{{ 'Disable auto detection' if auto_provider_detection else 'Enable auto detection' }}</button>
+      </form>
+    </section>
+
     <form class="filters" method="get">
       <input name="q" value="{{ query }}" placeholder="Search original, optimized, or error text">
       <select name="status">
         <option value="all" {% if status == "all" %}selected{% endif %}>All statuses</option>
         <option value="success" {% if status == "success" %}selected{% endif %}>Success only</option>
         <option value="error" {% if status == "error" %}selected{% endif %}>Errors only</option>
+      </select>
+      <select name="provider">
+        <option value="all" {% if provider == "all" %}selected{% endif %}>All providers</option>
+        <option value="chatgpt" {% if provider == "chatgpt" %}selected{% endif %}>ChatGPT</option>
+        <option value="claude" {% if provider == "claude" %}selected{% endif %}>Claude</option>
+        <option value="gemini" {% if provider == "gemini" %}selected{% endif %}>Gemini</option>
+        <option value="generic" {% if provider == "generic" %}selected{% endif %}>Generic</option>
       </select>
       <button type="submit">Filter</button>
     </form>
@@ -507,7 +635,8 @@ DASHBOARD_TEMPLATE = """
               <div class="record-head">
                 <div>
                   <strong>#{{ record.id }}</strong>
-                  <span class="meta">{{ record.created_at }} - {{ record.source }}</span>
+                  <span class="meta">{{ record.created_at }} - {{ record.source }} - {{ record.detected_provider }} - {{ record.execution_path or "-" }}</span>
+                  <span class="meta">consent_required={{ record.consent_required }} | consent_granted={{ record.consent_granted }} | consent_denied={{ record.consent_denied }}</span>
                 </div>
                 <span class="badge {{ record.status }}">{{ record.status }}</span>
               </div>

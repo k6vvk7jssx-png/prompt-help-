@@ -10,7 +10,10 @@ from prompt_optimizer_app.config import LOG_FILE, AppConfig, load_config
 from prompt_optimizer_app.dashboard import DashboardServer
 from prompt_optimizer_app.deepseek import DeepSeekClient
 from prompt_optimizer_app.hotkeys import HotkeyController
+from prompt_optimizer_app.optimization_router import OptimizationRouter
+from prompt_optimizer_app.runtime_settings import RuntimeSettingsStore
 from prompt_optimizer_app.storage import PromptHistoryStore
+from prompt_optimizer_app.web_helpers import WebHelperPipeline
 from prompt_optimizer_app.worker import PromptOptimizerWorker
 
 
@@ -22,10 +25,19 @@ class PromptOptimizerTrayApp:
         self.config = config
         self.status = "Starting..."
         self.client = DeepSeekClient(config)
+        self.runtime_settings_store = RuntimeSettingsStore()
+        self.runtime_settings_store.disarm_web_access_on_startup()
+        self.web_helpers = WebHelperPipeline(config)
+        self.optimization_router = OptimizationRouter(
+            config=config,
+            deepseek_client=self.client,
+            web_helpers=self.web_helpers,
+            runtime_settings_store=self.runtime_settings_store,
+        )
         self.history_store = PromptHistoryStore()
         self.worker = PromptOptimizerWorker(
             config,
-            self.client,
+            self.optimization_router,
             self.history_store,
             self.set_status,
         )
@@ -34,6 +46,8 @@ class PromptOptimizerTrayApp:
             config,
             self.history_store,
             self.hotkeys,
+            self.optimization_router,
+            self.runtime_settings_store,
             self.set_status,
         )
         self.icon = pystray.Icon(
@@ -105,6 +119,8 @@ class PromptOptimizerTrayApp:
             self.config = new_config
             self.client.config = new_config
             self.worker.config = new_config
+            self.web_helpers.config = new_config
+            self.optimization_router.config = new_config
             self.dashboard.update_config(new_config)
             self.hotkeys.reload(new_config.hotkey, self.run_worker_thread)
             self.set_status(f"Config reloaded. Hotkey: {new_config.hotkey}")
@@ -112,6 +128,17 @@ class PromptOptimizerTrayApp:
         except Exception as exc:
             self.set_status(f"Reload failed: {exc}")
             logger.exception("Failed to reload config.")
+        finally:
+            self.icon.update_menu()
+
+    def set_web_access(self, enabled: bool, _icon=None, _item=None) -> None:
+        try:
+            self.runtime_settings_store.set_web_access_armed(enabled)
+            state = "ARMED" if enabled else "DISARMED"
+            self.set_status(f"Web access {state}.")
+        except Exception as exc:
+            self.set_status(f"Web access toggle failed: {exc}")
+            logger.exception("Failed to toggle web access.")
         finally:
             self.icon.update_menu()
 
@@ -125,6 +152,16 @@ class PromptOptimizerTrayApp:
         logger.info("Status: %s", message)
 
     def _build_menu(self):
+        def web_access_label(_item):
+            runtime_settings = self.runtime_settings_store.load()
+            if runtime_settings.web_access_armed:
+                return "Disable web access (DISARM)"
+            return "Enable web access (ARM)"
+
+        def toggle_web_access(_icon=None, _item=None):
+            runtime_settings = self.runtime_settings_store.load()
+            self.set_web_access(not runtime_settings.web_access_armed)
+
         return pystray.Menu(
             pystray.MenuItem(lambda _item: self.status, None, enabled=False),
             pystray.MenuItem(
@@ -133,6 +170,7 @@ class PromptOptimizerTrayApp:
                 else "Start hotkey",
                 self.toggle_hotkey,
             ),
+            pystray.MenuItem(web_access_label, toggle_web_access),
             pystray.MenuItem(
                 "Test clipboard optimization",
                 self.test_clipboard_optimization,

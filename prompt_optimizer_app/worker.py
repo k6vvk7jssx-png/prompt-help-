@@ -8,7 +8,7 @@ import pyautogui
 import pyperclip
 
 from prompt_optimizer_app.config import AppConfig
-from prompt_optimizer_app.deepseek import DeepSeekClient
+from prompt_optimizer_app.optimization_router import OptimizationRouter
 from prompt_optimizer_app.storage import PromptHistoryStore
 
 
@@ -22,12 +22,12 @@ class PromptOptimizerWorker:
     def __init__(
         self,
         config: AppConfig,
-        client: DeepSeekClient,
+        optimization_router: OptimizationRouter,
         history_store: PromptHistoryStore,
         on_status: Callable[[str], None] | None = None,
     ):
         self.config = config
-        self.client = client
+        self.optimization_router = optimization_router
         self.history_store = history_store
         self.on_status = on_status or (lambda message: None)
         self._lock = threading.Lock()
@@ -59,19 +59,30 @@ class PromptOptimizerWorker:
                 self._report("No selected text found. Select text first, then try again.")
                 return
 
-            self._report("Optimizing selected text with DeepSeek...")
-            optimized = self.client.optimize_prompt(selected_text)
+            self._report("Optimizing selected text...")
+            result = self.optimization_router.optimize(selected_text)
+            optimized = result.optimized_text
             self.history_store.add_success(
-                source="hotkey",
+                source=result.execution_path if result.execution_path else "hotkey",
                 original_text=selected_text,
                 optimized_text=optimized,
+                detected_provider=result.detected_provider,
+                execution_path=result.execution_path,
+                helper_name=result.helper_name,
+                helper_latency_ms=result.helper_latency_ms,
+                active_window_title=result.active_window_title,
+                consent_required=result.consent_required,
+                consent_granted=result.consent_granted,
+                consent_denied=result.consent_denied,
             )
 
             pyperclip.copy(optimized)
             if paste_result:
                 time.sleep(self.config.paste_settle_seconds)
                 pyautogui.hotkey("ctrl", "v")
-                self._report("Optimized prompt pasted.")
+                self._report(
+                    f"Optimized prompt pasted ({result.detected_provider} via {result.execution_path})."
+                )
             else:
                 self._report("Optimized prompt copied to clipboard.")
         except Exception as exc:
@@ -79,6 +90,12 @@ class PromptOptimizerWorker:
                 source="hotkey",
                 original_text=selected_text if "selected_text" in locals() else "",
                 error_message=str(exc),
+                detected_provider=self.optimization_router.status.last_provider,
+                execution_path=self.optimization_router.status.last_execution_path,
+                helper_name=self.optimization_router.status.last_helper_name,
+                consent_required=self.optimization_router.status.consent_required,
+                consent_granted=self.optimization_router.status.consent_granted,
+                consent_denied=self.optimization_router.status.consent_denied,
             )
             self._report(f"Optimization failed: {exc}", exc_info=True)
             try:
@@ -105,12 +122,21 @@ class PromptOptimizerWorker:
                 self._report("Clipboard is empty. Copy text first, then run the test.")
                 return
 
-            self._report("Optimizing clipboard text with DeepSeek...")
-            optimized = self.client.optimize_prompt(original_clipboard)
+            self._report("Optimizing clipboard text...")
+            result = self.optimization_router.optimize(original_clipboard)
+            optimized = result.optimized_text
             self.history_store.add_success(
-                source="clipboard_test",
+                source=f"clipboard_test_{result.execution_path}",
                 original_text=original_clipboard,
                 optimized_text=optimized,
+                detected_provider=result.detected_provider,
+                execution_path=result.execution_path,
+                helper_name=result.helper_name,
+                helper_latency_ms=result.helper_latency_ms,
+                active_window_title=result.active_window_title,
+                consent_required=result.consent_required,
+                consent_granted=result.consent_granted,
+                consent_denied=result.consent_denied,
             )
             pyperclip.copy(optimized)
             self._report("Optimized prompt copied to clipboard.")
@@ -119,6 +145,12 @@ class PromptOptimizerWorker:
                 source="clipboard_test",
                 original_text=original_clipboard,
                 error_message=str(exc),
+                detected_provider=self.optimization_router.status.last_provider,
+                execution_path=self.optimization_router.status.last_execution_path,
+                helper_name=self.optimization_router.status.last_helper_name,
+                consent_required=self.optimization_router.status.consent_required,
+                consent_granted=self.optimization_router.status.consent_granted,
+                consent_denied=self.optimization_router.status.consent_denied,
             )
             self._report(f"Clipboard optimization failed: {exc}", exc_info=True)
             try:

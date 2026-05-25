@@ -1,15 +1,20 @@
 # Prompt Optimizer Background Tray App
 
-Select text in any Windows app, press `Ctrl + Alt + P`, send the selected text to DeepSeek, and replace it with an optimized Markdown prompt.
+Select text in any Windows app, press `Ctrl + Alt + P`, route optimization by detected provider (`ChatGPT`, `Claude`, `Gemini`), and replace the selected text with an optimized Markdown prompt.
 
-This is a local Windows background app with a system tray icon. It does not integrate with any specific app, browser, Gmail, Notion, Word, ChatGPT, or Supabase. It only uses a global hotkey, clipboard copy/paste, and simulated keyboard shortcuts.
+This is a local Windows background app with a system tray icon. It uses a global hotkey, clipboard copy/paste, and keyboard/browser automation. It does not require Supabase and keeps all runtime data local.
 
 ## Features
 
 - Runs in the Windows system tray.
 - Registers `Ctrl + Alt + P` as a global hotkey.
 - Copies the selected text from the active app.
-- Sends it to the DeepSeek API.
+- Detects active provider from the foreground window title.
+- Keeps web helper access disabled by default (`WEB_HELPERS_ENABLED=false`).
+- Requires explicit web access arming from tray/dashboard before any external run.
+- Shows a native consent alert before every external run to ChatGPT/Claude/Gemini helper.
+- Tries provider-specific web helper automation only after your per-run consent.
+- Falls back automatically to DeepSeek if web helper automation fails.
 - Replaces the selected text with the optimized Markdown prompt.
 - Logs status and errors to `logs/prompt_optimizer.log`.
 - Saves prompt history to `data/prompt_history.sqlite3`.
@@ -42,6 +47,12 @@ Then open `.env` and set:
 
 ```text
 DEEPSEEK_API_KEY=your_real_key_here
+```
+
+Install the browser runtime once for Playwright:
+
+```powershell
+playwright install chromium
 ```
 
 Start the app without a terminal window:
@@ -82,6 +93,13 @@ COPY_SETTLE_SECONDS=0.45
 PASTE_SETTLE_SECONDS=0.1
 DASHBOARD_HOST=127.0.0.1
 DASHBOARD_PORT=8765
+WEB_HELPERS_ENABLED=false
+WEB_HELPER_TIMEOUT_SECONDS=90
+WEB_HELPER_RETRY_COUNT=1
+WEB_HELPER_FALLBACK_LOCAL=true
+OPENAI_HELPER_URL=https://platform.openai.com/chat/edit?models=gpt-5.4-mini&optimize=true
+CLAUDE_HELPER_URL=https://claude.ai/public/artifacts/3796db7e-4ef1-4cab-b70c-d045778f23ec
+GEMINI_HELPER_URL=https://aistudio.google.com/prompts/new_chat
 ```
 
 ## Run
@@ -117,6 +135,11 @@ The dashboard shows:
 - Power button to turn the hotkey on or off.
 - DeepSeek API test button.
 - System prompt editor for the DeepSeek agent.
+- Web helper pipeline status (provider, execution path, helper latency, helper errors).
+- Web access ARM/DISARM control.
+- Per-run consent status (required/granted/denied).
+- Auto provider detection toggle.
+- Direct helper links (OpenAI, Claude, Gemini).
 - Prompt history.
 - Original text and optimized Markdown.
 - Success and error status.
@@ -129,6 +152,7 @@ Local files:
 ```text
 data/prompt_history.sqlite3
 data/system_prompt.md
+data/runtime_settings.json
 logs/prompt_optimizer.log
 ```
 
@@ -202,6 +226,8 @@ The desktop automation itself does not run on Vercel because Vercel cannot acces
 ## Notes
 
 - On some Windows systems, global hotkeys may require running the terminal as Administrator.
+- For web helper mode, stay logged in at least once on OpenAI, Claude, and AI Studio in the browser profile used by Playwright.
+- Consent is always required before each external web-helper run. Denied consent triggers automatic local fallback.
 - The script temporarily uses the clipboard. If optimization fails, it tries to restore the previous clipboard content.
 - `Ctrl + Alt + P` may conflict with system or app shortcuts on some machines. Change it with `PROMPT_OPTIMIZER_HOTKEY` in `.env`, then use **Reload config** from the tray menu.
 - Keep `.env` private. It is ignored by Git.

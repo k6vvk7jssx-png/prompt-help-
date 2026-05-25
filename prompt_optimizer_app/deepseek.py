@@ -320,10 +320,11 @@ class DeepSeekClient:
     def __init__(self, config: AppConfig):
         self.config = config
 
-    def optimize_prompt(self, text: str) -> str:
+    def optimize_prompt(self, text: str, provider: str = "generic") -> str:
         if not self.config.deepseek_api_key:
             raise RuntimeError("DEEPSEEK_API_KEY is missing. Add it to your .env file.")
 
+        provider_instruction = _provider_instruction(provider)
         response = requests.post(
             f"{self.config.deepseek_base_url}/chat/completions",
             headers={
@@ -333,7 +334,10 @@ class DeepSeekClient:
             json={
                 "model": self.config.deepseek_model,
                 "messages": [
-                    {"role": "system", "content": get_system_prompt()},
+                    {
+                        "role": "system",
+                        "content": f"{get_system_prompt()}\n\n{provider_instruction}".strip(),
+                    },
                     {"role": "user", "content": text},
                 ],
                 "temperature": 0.2,
@@ -360,3 +364,22 @@ class DeepSeekClient:
             raise RuntimeError("DeepSeek returned an empty prompt.")
 
         return optimized
+
+
+def _provider_instruction(provider: str) -> str:
+    if provider == "chatgpt":
+        return (
+            "Provider context: ChatGPT.\n"
+            "Prioritize strict output format, compact headings, explicit constraints, and direct execution clarity."
+        )
+    if provider == "claude":
+        return (
+            "Provider context: Claude.\n"
+            "Prioritize rich context blocks, clear reasoning checkpoints, and explicit acceptance criteria."
+        )
+    if provider == "gemini":
+        return (
+            "Provider context: Gemini.\n"
+            "Prioritize explicit instruction ordering, concrete output schema, and concise multimodal-friendly context."
+        )
+    return "Provider context: Generic assistant."
