@@ -1,237 +1,64 @@
-# Prompt Optimizer Background Tray App
+# Prompt Optimizer Desktop
 
-Select text in any Windows app, press `Ctrl + Alt + P`, route optimization by detected provider (`ChatGPT`, `Claude`, `Gemini`), and replace the selected text with an optimized Markdown prompt.
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
+[![Platform](https://img.shields.io/badge/Platform-Windows-0078D6.svg)](https://microsoft.com/windows)
+[![LLM: DeepSeek / OpenAI / Claude](https://img.shields.io/badge/LLM-Multi--Provider-purple.svg)](#)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This is a local Windows background app with a system tray icon. It uses a global hotkey, clipboard copy/paste, and keyboard/browser automation. It does not require Supabase and keeps all runtime data local.
+A lightweight, system-wide Windows desktop application that enhances and restructures raw user prompts in real-time across any application via global hotkeys.
 
-## Features
+---
 
-- Runs in the Windows system tray.
-- Registers `Ctrl + Alt + P` as a global hotkey.
-- Copies the selected text from the active app.
-- Detects active provider from the foreground window title.
-- Keeps web helper access disabled by default (`WEB_HELPERS_ENABLED=false`).
-- Requires explicit web access arming from tray/dashboard before any external run.
-- Shows a native consent alert before every external run to ChatGPT/Claude/Gemini helper.
-- Shows a native consent alert before every DeepSeek API run when `REQUIRE_DEEPSEEK_CONSENT=true`.
-- Tries provider-specific web helper automation only after your per-run consent.
-- Falls back automatically to DeepSeek if web helper automation fails.
-- Replaces the selected text with the optimized Markdown prompt.
-- Logs status and errors to `logs/prompt_optimizer.log`.
-- Saves prompt history to `data/prompt_history.sqlite3`.
-- Saves an optional custom agent system prompt to `data/system_prompt.md`.
-- Includes tray menu actions for start/stop, clipboard test, dashboard, config reload, logs, and quit.
-- Opens a local dashboard at `http://127.0.0.1:8765`.
-- Starts the local dashboard automatically when the tray app starts.
+## 💡 How It Works
 
-## Setup
+1. **Select Text Anywhere:** Highlight any rough prompt in your browser, IDE, or terminal.
+2. **Press Hotkey (`Ctrl + Shift + O`):** Prompt Optimizer captures the active window context and highlighted text.
+3. **Provider & Domain Detection:** Automatically identifies whether you are querying ChatGPT, Claude, Gemini, or DeepSeek and maps your intent against a **35+ domain role matrix**.
+4. **Instant In-Place Optimization:** Replaces the text with a structured, high-context Markdown prompt with expert roles, constraints, and output formats.
 
-Install Python 3.11 or newer for Windows first, and enable **Add python.exe to PATH** during installation.
+---
 
-If `python` is not visible in PowerShell, try the direct path:
+## 🧠 Domain Metaprompting Matrix
 
-```powershell
-& "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe" --version
+Prompt Optimizer includes specialized expert schemas across major domains:
+* **Software Engineering:** Architecture design, full-stack, DevOps, code review, test automation.
+* **AI & Agentic Systems:** RAG systems, tool orchestration, metaprompts, system prompts.
+* **UI/UX & Design:** Design systems, wireframing, frontend engineering, accessibility.
+* **Business & Strategy:** PRD creation, pitch decks, startup roadmaps, legal/financial analysis.
+* **Writing & Communication:** Technical copywriting, localisation, tone shaping.
+
+---
+
+## 🛠️ Architecture & Modules
+
+* `prompt_optimizer_app/hotkeys.py`: Win32 low-level global key listener.
+* `prompt_optimizer_app/deepseek.py`: Prompt refinement engine and structured metaprompt matrix.
+* `prompt_optimizer_app/provider_detector.py`: Heuristic window inspection for target AI models.
+* `prompt_optimizer_app/tray.py`: Background system tray integration.
+* `build_exe.bat`: One-click PyInstaller packaging for standalone `.exe` binaries.
+
+---
+
+## 🚀 Installation & Usage
+
+```bash
+# Clone repository
+git clone https://github.com/k6vvk7jssx-png/prompt-help-.git
+cd prompt-help-
+
+# Setup environment
+setup.bat
+
+# Run application
+run.bat
 ```
 
-If both `python --version` and the direct path fail, reinstall Python from python.org and enable **Add python.exe to PATH**, then close and reopen PowerShell.
-
-Fast Windows setup:
-
-```powershell
-.\setup.bat
-```
-
-If an old virtual environment is broken, `setup.bat` recreates `.venv` automatically after Python is visible again.
-
-Then open `.env` and set:
-
-```text
-DEEPSEEK_API_KEY=your_real_key_here
-```
-
-Install the browser runtime once for Playwright:
-
-```powershell
-playwright install chromium
-```
-
-Start the app without a terminal window:
-
-```powershell
-.\run.bat
-```
-
-If the app does not appear in the tray, run the debug launcher so Windows keeps the error window open:
-
-```powershell
-.\debug_run.bat
-```
-
-Manual setup:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-Copy-Item .env.example .env
-```
-
-Edit `.env` and set:
-
-```text
-DEEPSEEK_API_KEY=your_real_key_here
-```
-
-Optional `.env` settings:
-
-```text
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_MODEL=deepseek-chat
-DEEPSEEK_TIMEOUT_SECONDS=60
-REQUIRE_DEEPSEEK_CONSENT=true
-PROMPT_OPTIMIZER_HOTKEY=ctrl+alt+p
-COPY_SETTLE_SECONDS=0.45
-PASTE_SETTLE_SECONDS=0.1
-DASHBOARD_HOST=127.0.0.1
-DASHBOARD_PORT=8765
-WEB_HELPERS_ENABLED=false
-WEB_HELPER_TIMEOUT_SECONDS=90
-WEB_HELPER_RETRY_COUNT=1
-WEB_HELPER_FALLBACK_LOCAL=true
-OPENAI_HELPER_URL=https://platform.openai.com/chat/edit?models=gpt-5.4-mini&optimize=true
-CLAUDE_HELPER_URL=https://claude.ai/public/artifacts/3796db7e-4ef1-4cab-b70c-d045778f23ec
-GEMINI_HELPER_URL=https://aistudio.google.com/prompts/new_chat
-```
-
-## Run
-
-```powershell
-python prompt_optimizer.py
-```
-
-Or double-click `run.bat` to start it as a background tray app without keeping a terminal open.
-
-Then:
-
-1. Write rough text in any app.
-2. Select the text.
-3. Press `Ctrl + Alt + P`.
-4. Wait for the optimized Markdown prompt to replace the selection.
-
-Use the tray icon menu to:
-
-- Stop or start the hotkey.
-- Test clipboard optimization using the current clipboard content.
-- Open the local dashboard.
-- Open logs.
-- Reload `.env` after editing settings.
-- Quit the background app.
-
-## Local Dashboard
-
-Open the tray icon menu and select **Open dashboard**.
-
-The dashboard shows:
-
-- Power button to turn the hotkey on or off.
-- DeepSeek API test button.
-- System prompt editor for the DeepSeek agent.
-- Web helper pipeline status (provider, execution path, helper latency, helper errors).
-- Web access ARM/DISARM control.
-- Per-run consent status (required/granted/denied).
-- Auto provider detection toggle.
-- Direct helper links (OpenAI, Claude, Gemini).
-- Prompt history.
-- Original text and optimized Markdown.
-- Success and error status.
-- Recent errors.
-- Search and status filters.
-- Copy button for optimized prompts.
-
-Local files:
-
-```text
-data/prompt_history.sqlite3
-data/system_prompt.md
-data/runtime_settings.json
-logs/prompt_optimizer.log
-```
-
-The `data/` and `logs/` folders are ignored by Git so private prompts, API errors, custom system prompts, and local history are not published by mistake.
-
-## Edit the Agent System Prompt
-
-Open the dashboard at `http://127.0.0.1:8765` and click **Edit system prompt**.
-
-When you save, the custom prompt is stored only on your machine:
-
-```text
-data/system_prompt.md
-```
-
-The next hotkey run uses the saved prompt automatically. If you reset it from the dashboard, the app goes back to the default prompt built into `prompt_optimizer_app/deepseek.py`.
-
-## Repository Export
-
-To use this from another machine or repository:
-
-```powershell
-git clone <your-repository-url>
-cd <your-repository-folder>
-.\setup.bat
-.\run.bat
-```
-
-Add the real DeepSeek API key to `.env` before using the hotkey.
-
-To create a standalone Windows executable:
-
-```powershell
+To compile a standalone Windows executable:
+```bash
 build_exe.bat
 ```
 
-The output will be:
+---
 
-```text
-dist\PromptOptimizer.exe
-```
-
-To publish on GitHub later:
-
-```powershell
-git add .
-git commit -m "Add local prompt optimizer tray app"
-git branch -M main
-git remote add origin <your-github-repository-url>
-git push -u origin main
-```
-
-Do not commit `.env`, `data/`, or `logs/`.
-
-## Vercel
-
-Vercel deploys the public project page in `app.py`.
-
-The deployment entrypoint is explicitly set in `pyproject.toml`.
-
-If you want the Vercel page to show that DeepSeek is configured, add this Vercel Environment Variable:
-
-```text
-DEEPSEEK_API_KEY=your_real_deepseek_key
-```
-
-Add it in Vercel under **Project Settings -> Environment Variables** for Production, Preview, and Development as needed. The page only checks whether the variable exists; it never prints the secret.
-
-The desktop automation itself does not run on Vercel because Vercel cannot access a user's Windows keyboard, clipboard, system tray, or selected text in other apps. Users should install and run the Windows app locally with `setup.bat` and `run.bat`.
-
-## Notes
-
-- On some Windows systems, global hotkeys may require running the terminal as Administrator.
-- For web helper mode, stay logged in at least once on OpenAI, Claude, and AI Studio in the browser profile used by Playwright.
-- Consent is always required before each external web-helper run. Denied consent triggers automatic local fallback.
-- If `REQUIRE_DEEPSEEK_CONSENT=true`, consent is also required before each DeepSeek API call. If denied, no external API request is made and selected text is left unchanged.
-- The script temporarily uses the clipboard. If optimization fails, it tries to restore the previous clipboard content.
-- `Ctrl + Alt + P` may conflict with system or app shortcuts on some machines. Change it with `PROMPT_OPTIMIZER_HOTKEY` in `.env`, then use **Reload config** from the tray menu.
-- Keep `.env` private. It is ignored by Git.
-- Supabase is intentionally not used in this version. Configuration and logs stay local.
+## 📄 License
+MIT License.
